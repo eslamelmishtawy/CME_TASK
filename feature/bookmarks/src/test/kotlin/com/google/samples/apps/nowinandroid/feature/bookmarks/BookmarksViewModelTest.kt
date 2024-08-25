@@ -26,6 +26,7 @@ import com.google.samples.apps.nowinandroid.core.ui.NewsFeedUiState.Success
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
@@ -88,6 +89,20 @@ class BookmarksViewModelTest {
         val item = viewModel.feedUiState.value
         assertIs<Success>(item)
         assertEquals(item.feed.size, 0)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun multipleBookmarks_showInFeed() = runTest {
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.feedUiState.collect() }
+
+        newsRepository.sendNewsResources(newsResourcesTestData)
+        userDataRepository.setNewsResourceBookmarked(newsResourcesTestData[0].id, true)
+        userDataRepository.setNewsResourceBookmarked(newsResourcesTestData[1].id, true)
+        val item = viewModel.feedUiState.value
+        assertIs<Success>(item)
+        assertEquals(item.feed.size, 2)
 
         collectJob.cancel()
     }

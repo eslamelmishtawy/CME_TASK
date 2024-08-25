@@ -40,6 +40,8 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 
 /**
@@ -150,5 +152,43 @@ class SearchViewModelTest {
             expected = emptySet(),
             actual = userDataRepository.userData.first().bookmarkedNewsResources,
         )
+    }
+
+    @Test
+    fun matchingQuery_returnsCorrectResults() = runTest {
+        val collectJob =
+            launch(UnconfinedTestDispatcher()) { viewModel.searchResultUiState.collect() }
+
+        searchContentsRepository.addTopics(topicsTestData)
+        searchContentsRepository.addNewsResources(newsResourcesTestData)
+
+        // Perform a search with a query that matches the existing data
+        viewModel.onSearchQueryChanged("Espresso")
+
+        val result = viewModel.searchResultUiState.value
+        assertIs<SearchResultUiState.Success>(result)
+        assert(result.topics.isNotEmpty() || result.newsResources.isNotEmpty())
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun userDataChanges_areReflectedInSearchResults() = runTest {
+        val collectJob = launch(UnconfinedTestDispatcher()) { viewModel.searchResultUiState.collect() }
+
+        userDataRepository.setFollowedTopicIds(setOf("4"))
+        searchContentsRepository.addTopics(topicsTestData)
+        viewModel.onSearchQueryChanged("Espresso")
+
+        val result = viewModel.searchResultUiState.value
+        assertIs<SearchResultUiState.Success>(result)
+        assertTrue(result.topics.any { it.isFollowed })
+
+        userDataRepository.setFollowedTopicIds(emptySet())
+        val updatedResult = viewModel.searchResultUiState.value
+        assertIs<SearchResultUiState.Success>(updatedResult)
+        assertFalse(updatedResult.topics.any { it.isFollowed })
+
+        collectJob.cancel()
     }
 }

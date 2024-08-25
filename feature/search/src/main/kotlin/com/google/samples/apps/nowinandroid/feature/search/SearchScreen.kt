@@ -498,6 +498,7 @@ private fun SearchTextField(
                     onClick = {
                         onSearchQueryChanged("")
                     },
+                    modifier = Modifier.testTag("clearSearchQuery"),
                 ) {
                     Icon(
                         imageVector = NiaIcons.Close,

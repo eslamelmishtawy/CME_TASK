@@ -17,17 +17,28 @@
 package com.google.samples.apps.nowinandroid.feature.search
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.printToLog
 import com.google.samples.apps.nowinandroid.core.data.model.RecentSearchQuery
 import com.google.samples.apps.nowinandroid.core.model.data.DarkThemeConfig.DARK
 import com.google.samples.apps.nowinandroid.core.model.data.ThemeBrand.ANDROID
@@ -220,5 +231,72 @@ class SearchScreenTest {
         composeTestRule
             .onNodeWithText(searchNotReadyString)
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun searchTextField_isInitiallyEmpty() {
+        composeTestRule.setContent {
+            SearchScreen()
+        }
+
+        composeTestRule
+            .onNodeWithTag("searchTextField")
+            .assertTextEquals("")
+    }
+
+    @Test
+    fun clearSearchQuery_searchResultsCleared() {
+        var searchQuery by mutableStateOf("Espresso")
+
+        composeTestRule.setContent {
+            SearchScreen(
+                searchQuery = searchQuery,
+                onSearchQueryChanged = { newQuery -> searchQuery = newQuery },
+            )
+        }
+
+        composeTestRule.onNodeWithTag("searchTextField")
+            .assertExists()
+            .assertIsDisplayed()
+            .assertTextEquals("Espresso")
+
+        composeTestRule.onNodeWithTag("clearSearchQuery")
+            .assertExists()
+            .assertIsDisplayed()
+            .performClick()
+
+        composeTestRule.onNodeWithTag("searchTextField")
+            .assertTextEquals("")
+        }
+
+    @Test
+    fun clearRecentSearches_recentSearchesAreCleared() {
+        var recentSearchesState by mutableStateOf(
+            RecentSearchQueriesUiState.Success(
+                recentQueries = listOf("kotlin", "testing").map(::RecentSearchQuery)
+            )
+        )
+
+        composeTestRule.setContent {
+            SearchScreen(
+                searchResultUiState = SearchResultUiState.EmptyQuery,
+                recentSearchesUiState = recentSearchesState,
+                onClearRecentSearches = {
+                    recentSearchesState = RecentSearchQueriesUiState.Success(emptyList())
+                }
+            )
+        }
+
+        composeTestRule
+            .onNodeWithContentDescription(clearRecentSearchesContentDesc)
+            .performClick()
+
+        composeTestRule
+            .onAllNodesWithText("kotlin")
+            .assertCountEquals(0)
+
+        composeTestRule
+            .onAllNodesWithText("testing")
+            .assertCountEquals(0)
     }
 }
